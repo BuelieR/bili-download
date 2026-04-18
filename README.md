@@ -8,8 +8,9 @@
 # 下载&使用
 | 平台 | Windows | Linux Debian系 | Android(Termux) |
 | --- | --- | --- | --- |
-| 下载 | [电脑Win系统坏了，QWQ](#) | [点击下载](#) | [点击下载](#) |
+| 下载 | [电脑Win系统坏了，QWQ](#) | [点击下载](https://github.com/BuelieR/bili-download/releases/download/R_v1.0.0/bili-downloader_1.0.0_all_linux.deb) | [点击下载](https://github.com/BuelieR/bili-download/releases/download/R_v1.0.0/bili-downloader_1.0.0_all_linux.deb) |
 | 镜像 | [电脑Win系统坏了，QWQ](#) | [点击下载](#) | [点击下载](#) |
+| 网页版 | [电脑Win系统坏了，QWQ](#) | [点击下载](https://github.com/BuelieR/bili-download/releases/download/R_v1.0.0/bili-downloader-web_1.0.0_all_linux.deb) | [点击下载](https://github.com/BuelieR/bili-download/releases/download/R_v1.0.0/bili-downloader-web_1.0.0_all_linux.deb) |
 
 # 常见问题(FAQ)
 * **什么是`SESSDATA`?**

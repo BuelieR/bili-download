@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B站下载器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* 头部 */
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+        }
+        
+        /* 卡片样式 */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .card-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+            border-left: 4px solid #667eea;
+            padding-left: 12px;
+        }
+        
+        /* 输入组 */
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .input-group input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        
+        /* 按钮 */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #38a169;
+        }
+        
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        
+        /* 选项组 */
+        .radio-group {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        
+        /* 搜索结果 */
+        .search-results {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .result-item {
+            padding: 12px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .result-item:hover {
+            background: #f7fafc;
+            border-color: #667eea;
+        }
+        
+        .result-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .result-info {
+            font-size: 12px;
+            color: #718096;
+        }
+        
+        /* 进度条 */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #48bb78;
+            transition: width 0.3s;
+            width: 0%;
+        }
+        
+        /* 日志区域 */
+        .log-area {
+            background: #1a202c;
+            color: #a0aec0;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: auto;
+        }
+        
+        /* 两列布局 */
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        
+        /* 标签页 */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            color: #718096;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            margin-bottom: -2px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .two-columns {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 B站下载器</h1>
+            <p>支持视频/音频下载 | 批量下载 | 收藏夹下载</p>
+        </div>
+        
+        <!-- 标签页 -->
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('download')">📥 下载</button>
+                <button class="tab" onclick="switchTab('favorites')">⭐ 收藏夹</button>
+                <button class="tab" onclick="switchTab('settings')">⚙️ 设置</button>
+            </div>
+            
+            <!-- 下载标签页 -->
+            <div id="tab-download" class="tab-content active">
+                <!-- 单视频下载 -->
+                <div class="card-title">单视频下载</div>
+                <div class="input-group">
+                    <input type="text" id="bvid-input" placeholder="输入BV号或视频链接...">
+                    <button class="btn btn-primary" onclick="getVideoInfo()">获取信息</button>
+                    <button class="btn btn-success" onclick="startDownload()">下载</button>
+                </div>
+                
+                <!-- 视频信息 -->
+                <div id="video-info" style="display: none; background: #f7fafc; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                    <div id="video-title"></div>
+                    <div id="video-author" style="font-size: 12px; color: #718096;"></div>
+                </div>
+                
+                <!-- 下载类型 -->
+                <div class="radio-group">
+                    <label><input type="radio" name="download-type" value="video"> 🎬 仅视频</label>
+                    <label><input type="radio" name="download-type" value="audio" checked> 🎵 仅音频</label>
+                    <label><input type="radio" name="download-type" value="all"> 🎬+🎵 完整视频</label>
+                </div>
+                
+                <!-- 搜索区域 -->
+                <div class="card-title" style="margin-top: 24px;">🔍 搜索视频</div>
+                <div class="input-group">
+                    <input type="text" id="search-input" placeholder="输入关键词搜索...">
+                    <button class="btn btn-primary" onclick="searchVideos()">搜索</button>
+                </div>
+                <div style="font-size: 12px; color: #718096; margin-bottom: 12px;">
+                    ⚠️ 提示：搜索功能可能受B站限制，如果失败请直接使用BV号下载
+                </div>
+                <div id="search-results" class="search-results"></div>
+            </div>
+            
+            <!-- 收藏夹标签页 -->
+            <div id="tab-favorites" class="tab-content">
+                <div class="card-title">收藏夹下载</div>
+                <div class="input-group">
+                    <input type="text" id="fid-input" placeholder="输入收藏夹ID...">
+                    <button class="btn btn-primary" onclick="downloadFav(false)">下载公开收藏夹</button>
+                    <button class="btn btn-warning" onclick="downloadFav(true)">下载私密收藏夹</button>
+                </div>
+                
+                <div class="card-title" style="margin-top: 24px;">📄 批量下载</div>
+                <div class="input-group">
+                    <textarea id="batch-input" rows="3" placeholder="每行一个BV号..." style="flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px;"></textarea>
+                </div>
+                <button class="btn btn-success" onclick="batchDownload()">开始批量下载</button>
+            </div>
+            
+            <!-- 设置标签页 -->
+            <div id="tab-settings" class="tab-content">
+                <div class="card-title">下载设置</div>
+                <div class="input-group">
+                    <input type="text" id="save-dir" placeholder="保存目录">
+                    <button class="btn btn-primary" onclick="loadConfig()">加载</button>
+                    <button class="btn btn-success" onclick="saveConfig()">保存</button>
+                </div>
+                
+                <div class="input-group">
+                    <input type="number" id="max-parallel" placeholder="并行下载数量 (1-10)">
+                    <input type="number" id="max-speed" placeholder="速度限制 MB/s (0=不限)">
+                </div>
+                
+                <div class="input-group">
+                    <input type="text" id="filename-format" placeholder="文件名格式">
+                </div>
+                
+                <div class="card-title" style="margin-top: 24px;">🔐 登录设置</div>
+                <div class="input-group">
+                    <input type="password" id="cookie-input" placeholder="SESSDATA">
+                </div>
+                <p style="font-size: 12px; color: #718096; margin-top: 8px;">
+                    提示：SESSDATA用于下载私密内容，从浏览器开发者工具中获取
+                </p>
+            </div>
+        </div>
+        
+        <!-- 进度和日志 -->
+        <div class="two-columns">
+            <div class="card">
+                <div class="card-title">📊 下载进度</div>
+                <div id="current-task">等待下载...</div>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">📝 日志</div>
+                <div id="log-area" class="log-area"></div>
+                <button class="btn btn-danger" style="margin-top: 12px; width: 100%;" onclick="clearLog()">清空日志</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentTaskId = null;
+        let progressInterval = null;
+        
+        // 切换标签页
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            if (tab === 'download') {
+                document.querySelector('.tab').classList.add('active');
+                document.getElementById('tab-download').classList.add('active');
+            } else if (tab === 'favorites') {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('tab-favorites').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab')[2].classList.add('active');
+                document.getElementById('tab-settings').classList.add('active');
+                loadConfig();
+            }
+        }
+        
+        // 添加日志
+        function addLog(message) {
+            const logArea = document.getElementById('log-area');
+            const time = new Date().toLocaleTimeString();
+            logArea.innerHTML += `[${time}] ${message}\n`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+        
+        // 清空日志
+        function clearLog() {
+            document.getElementById('log-area').innerHTML = '';
+        }
+        
+        // 获取视频信息
+        async function getVideoInfo() {
+            const bvid = document.getElementById('bvid-input').value.trim();
+            if (!bvid) {
+                addLog('请输入BV号');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/video/info', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({bvid: bvid})
+                });
+                const data = await response.json();
+                
+                if (data.error) {
+                    addLog(`错误: ${data.error}`);
+                } else {
+                    document.getElementById('video-info').style.display = 'block';
+                    document.getElementById('video-title').innerHTML = `📹 ${data.title}`;
+                    document.getElementById('video-author').innerHTML = `👤 ${data.author}`;
+                    addLog(`获取视频信息成功: ${data.title}`);
+                }
+            } catch (error) {
+                addLog(`获取信息失败: ${error}`);
+            }
+        }
+        
+        // 开始下载
+        async function startDownload() {
+            const bvid = document.getElementById('bvid-input').value.trim();
+            if (!bvid) {
+                addLog('请输入BV号');
+                return;
+            }
+            
+            const downloadType = document.querySelector('input[name="download-type"]:checked').value;
+            
+            try {
+                const response = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({bvid: bvid, download_type: downloadType})
+                });
+                const data = await response.json();
+                currentTaskId = data.task_id;
+                addLog(`开始下载: ${bvid}`);
+                startProgressMonitoring();
+            } catch (error) {
+                addLog(`下载失败: ${error}`);
+            }
+        }
+        
+        // 搜索视频
+        async function searchVideos() {
+            const keyword = document.getElementById('search-input').value.trim();
+            if (!keyword) {
+                addLog('请输入搜索关键词');
+                return;
+            }
+            
+            addLog(`搜索: ${keyword}`);
+            const resultsDiv = document.getElementById('search-results');
+            resultsDiv.innerHTML = '<div style="text-align: center; padding: 20px;">搜索中...</div>';
+            
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({keyword: keyword, page: 1})
+                });
+                const data = await response.json();
+                
+                if (data.results && data.results.length > 0) {
+                    resultsDiv.innerHTML = '';
+                    data.results.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'result-item';
+                        div.onclick = () => {
+                            document.getElementById('bvid-input').value = item.bvid;
+                            getVideoInfo();
+                        };
+                        div.innerHTML = `
+                            <div class="result-title">${item.title}</div>
+                            <div class="result-info">${item.author} | ${item.bvid} | 播放: ${item.play}</div>
+                        `;
+                        resultsDiv.appendChild(div);
+                    });
+                    addLog(`找到 ${data.results.length} 个结果`);
+                } else {
+                    resultsDiv.innerHTML = '<div style="text-align: center; padding: 20px;">未找到相关视频</div>';
+                }
+            } catch (error) {
+                addLog(`搜索失败: ${error}`);
+                resultsDiv.innerHTML = '<div style="text-align: center; padding: 20px;">搜索失败，请稍后重试</div>';
+            }
+        }
+        
+        // 下载收藏夹
+        async function downloadFav(isPrivate) {
+            const fid = document.getElementById('fid-input').value.trim();
+            if (!fid) {
+                addLog('请输入收藏夹ID');
+                return;
+            }
+            
+            const downloadType = document.querySelector('input[name="download-type"]:checked').value;
+            
+            try {
+                const response = await fetch('/api/favorites', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        fid: fid,
+                        is_private: isPrivate,
+                        download_type: downloadType
+                    })
+                });
+                const data = await response.json();
+                currentTaskId = data.task_id;
+                addLog(`开始下载${isPrivate ? '私密' : '公开'}收藏夹: ${fid}`);
+                startProgressMonitoring();
+            } catch (error) {
+                addLog(`下载失败: ${error}`);
+            }
+        }
+        
+        // 批量下载
+        async function batchDownload() {
+            const batchText = document.getElementById('batch-input').value;
+            const bvids = batchText.split('\\n').filter(line => line.trim());
+            
+            if (bvids.length === 0) {
+                addLog('请输入BV号');
+                return;
+            }
+            
+            const downloadType = document.querySelector('input[name="download-type"]:checked').value;
+            
+            try {
+                const response = await fetch('/api/batch', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({bvids: bvids, download_type: downloadType})
+                });
+                const data = await response.json();
+                currentTaskId = data.task_id;
+                addLog(`开始批量下载 ${bvids.length} 个视频`);
+                startProgressMonitoring();
+            } catch (error) {
+                addLog(`批量下载失败: ${error}`);
+            }
+        }
+        
+        // 监控进度
+        function startProgressMonitoring() {
+            if (progressInterval) clearInterval(progressInterval);
+            
+            progressInterval = setInterval(async () => {
+                if (!currentTaskId) return;
+                
+                try {
+                    const response = await fetch(`/api/download/status/${currentTaskId}`);
+                    const data = await response.json();
+                    
+                    if (data.status === 'completed') {
+                        document.getElementById('current-task').innerHTML = '✅ 下载完成！';
+                        document.getElementById('progress-fill').style.width = '100%';
+                        addLog(data.success ? `下载完成！成功: ${data.success}/${data.total}` : '下载完成');
+                        clearInterval(progressInterval);
+                        currentTaskId = null;
+                    } else if (data.status === 'failed') {
+                        document.getElementById('current-task').innerHTML = `❌ 下载失败: ${data.error}`;
+                        addLog(`下载失败: ${data.error}`);
+                        clearInterval(progressInterval);
+                        currentTaskId = null;
+                    } else if (data.status === 'downloading') {
+                        const progress = data.progress || 0;
+                        document.getElementById('current-task').innerHTML = `📥 下载中... ${progress}%`;
+                        document.getElementById('progress-fill').style.width = `${progress}%`;
+                    }
+                } catch (error) {
+                    console.error('获取状态失败:', error);
+                }
+            }, 1000);
+        }
+        
+        // 加载配置
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                document.getElementById('save-dir').value = config.save_dir || '';
+                document.getElementById('max-parallel').value = config.max_parallel || 3;
+                document.getElementById('max-speed').value = config.max_speed_mbps || 0;
+                document.getElementById('filename-format').value = config.filename_format || '';
+                addLog('配置已加载');
+            } catch (error) {
+                addLog(`加载配置失败: ${error}`);
+            }
+        }
+        
+        // 保存配置
+        async function saveConfig() {
+            const config = {
+                save_dir: document.getElementById('save-dir').value,
+                max_parallel: parseInt(document.getElementById('max-parallel').value) || 3,
+                max_speed_mbps: parseFloat(document.getElementById('max-speed').value) || 0,
+                filename_format: document.getElementById('filename-format').value,
+                cookie: document.getElementById('cookie-input').value
+            };
+            
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
+                });
+                if (response.ok) {
+                    addLog('配置已保存');
+                } else {
+                    addLog('保存配置失败');
+                }
+            } catch (error) {
+                addLog(`保存配置失败: ${error}`);
+            }
+        }
+        
+        // 页面加载时加载配置
+        loadConfig();
+    </script>
+</body>
+</html>

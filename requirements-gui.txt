@@ -1,0 +1,8 @@
+# 原有依赖
+aiohttp>=3.8.0
+aiofiles>=23.0.0
+requests>=2.28.0
+
+# GUI依赖
+customtkinter>=5.2.0
+pillow>=9.0.0

@@ -4,7 +4,7 @@
 
 import webbrowser
 import customtkinter as ctk
-from (Deprecated)_gui.styles import COLORS, FONTS, SIZES
+from _Deprecated_gui._Deprecated_styles import COLORS, FONTS, SIZES
 
 
 class MainWindow(ctk.CTk):
@@ -72,8 +72,8 @@ class MainWindow(ctk.CTk):
         self.create_about_tab()
         
         # 最后创建需要后端的标签页（延迟初始化）
-        from gui.download_tab import DownloadTab
-        from gui.settings_tab import SettingsTab
+        from _Deprecated_gui._Deprecated_download_tab import DownloadTab
+        from _Deprecated_gui._Deprecated_settings_tab import SettingsTab
         
         self.download_tab = DownloadTab(self.tabview.tab("📥 下载"), self)
         self.settings_tab = SettingsTab(self.tabview.tab("⚙️ 设置"), self)

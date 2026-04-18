@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import customtkinter as ctk
-from (Deprecated)_gui.main_window import MainWindow
+from _Deprecated_gui._Deprecated_main_window import MainWindow
 
 
 def main():

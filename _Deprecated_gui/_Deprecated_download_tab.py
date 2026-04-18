@@ -7,7 +7,7 @@ import threading
 import re
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
-from (Deprecated)_gui.styles import COLORS, FONTS, SIZES
+from _Deprecated_gui._Deprecated_styles import COLORS, FONTS, SIZES
 
 
 class DownloadTab:

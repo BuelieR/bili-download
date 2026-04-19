@@ -12,9 +12,18 @@
 | 镜像 | [电脑Win系统坏了，QWQ](#) | [点击下载](#) | [点击下载](#) |
 | 网页版 | [电脑Win系统坏了，QWQ](#) | [点击下载](https://github.com/BuelieR/bili-download/releases/download/R_v1.0.0/bili-downloader-web_1.0.0_all_linux.deb) | [点击下载](https://github.com/BuelieR/bili-download/releases/download/R_v1.0.0/bili-downloader-web_1.0.0_all_linux.deb) |
 
+# 编译
+* **请先安装`FFmpeg`，这是本项目的依赖**
+* **执行`pip install -r requirements.txt`以安装`CLI`版本依赖**
+	* **`pip install -r requirements-gui.txt`安装`GUI`版本(现已废弃)**
+	* **`pip install -r requirements-web.txt`安装`WEB`(基于Flask)版本(BUG++)**
+* **执行`python3 <main.py/web_app.py/_Deprecated_gui_main.py文件路径>`以测试(推荐在虚拟环境运行)**
+* **执行`package.sh`以打包程序(Linux Debian系)**
+
 # 常见问题(FAQ)
 * **什么是`SESSDATA`?**
     * **B站登陆凭证。获取方法：(B站内) 按下`F12`打开开发者工具 -> 打开`存储`栏 -> 打开`Cookie`>`https://space.bilibili.com`，在项目过滤器里可以找到`SESSDATA`键，其值就是本项目所需。**
     * **![alt text](images/image.png)**
 * **此项目的可执行程序依赖有哪些？**
     * **`FFmpeg`**
+    * **`Windows`/`Linux`/`Android(Termux)`**

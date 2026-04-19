@@ -13,12 +13,14 @@
 | 网页版 | [电脑Win系统坏了，QWQ](#) | [点击下载](https://github.com/BuelieR/bili-download/releases/download/R_v1.0.0/bili-downloader-web_1.0.0_all_linux.deb) | [点击下载](https://github.com/BuelieR/bili-download/releases/download/R_v1.0.0/bili-downloader-web_1.0.0_all_linux.deb) |
 
 # 编译
-* **请先安装`FFmpeg`，这是本项目的依赖**
+* **请先安装`FFmpeg`&`pyinstaller`，这是本项目的依赖**
 * **执行`pip install -r requirements.txt`以安装`CLI`版本依赖**
 	* **`pip install -r requirements-gui.txt`安装`GUI`版本(现已废弃)**
 	* **`pip install -r requirements-web.txt`安装`WEB`(基于Flask)版本(BUG++)**
 * **执行`python3 <main.py/web_app.py/_Deprecated_gui_main.py文件路径>`以测试(推荐在虚拟环境运行)**
-* **执行`package.sh`以打包程序(Linux Debian系)**
+* **执行`package.sh`以打包`CLI`版程序(Linux Debian系)**
+	* **执行`package_web.sh`以打包`WEB`(FLask)版程序(Linux Debian系)**
+	* **打包GUI版本请自行修改`package.sh`中`MAIN_FILE`常量为`_Deprecated_gui_main.py`**
 
 # 常见问题(FAQ)
 * **什么是`SESSDATA`?**

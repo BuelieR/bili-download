@@ -29,3 +29,25 @@
 * **此项目的可执行程序依赖有哪些？**
     * **`FFmpeg`**
     * **`Windows`/`Linux`/`Android(Termux)`**
+    
+# 贡献注意事项
+* **请自行创建`.gitignore`文件并屏蔽，参考内容：**
+```
+.gitignore
+venv/
+__pycache__/
+*.deb
+*.rpm
+*.bin
+*.sh
+!package.sh
+*.json
+package/
+bili-downloader-web-1.0.0/
+build/
+dist/
+dists/
+*.spec
+*.tar.gz
+!package_web.sh
+```

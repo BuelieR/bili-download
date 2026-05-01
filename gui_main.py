@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
-import asyncio
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+
 from config import Config
 from api.bili_api import BiliAPI
 from downloader.video_downloader import VideoDownloader
-from cli import BiliCLI
+from gui.main_window import MainWindow
+
 
 def main():
     config = Config()
-    
-    # 登录(如需要)
+
     cookie = config.get('cookie')
     if not cookie and config.get('need_login'):
-        cookie = input("请输入SESSDATA(按回车跳过): ").strip()
+        from tkinter import simpledialog
+        cookie = simpledialog.askstring("登录", "请输入SESSDATA (留空跳过):", show='*')
         if cookie:
             config.set('cookie', cookie)
-    
+
     api = BiliAPI(cookie)
     downloader = VideoDownloader(config, api)
-    cli = BiliCLI(downloader, api, config)
-    
-    try:
-        cli.run()
-    except KeyboardInterrupt:
-        print("\n已退出")
-        sys.exit(0)
+
+    app = MainWindow(config, api, downloader)
+    app.run()
+
 
 if __name__ == "__main__":
     main()

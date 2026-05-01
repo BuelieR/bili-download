@@ -1,323 +1,243 @@
-"""
-主窗口
-"""
+import tkinter as tk
+from tkinter import ttk
+import threading
+from _Deprecated_gui._Deprecated_styles import AppStyles
+from _Deprecated_gui._Deprecated_settings_panel import SettingsPanel
+from _Deprecated_gui._Deprecated_download_panel import DownloadPanel
+from _Deprecated_gui._Deprecated_search_panel import SearchPanel
+from _Deprecated_gui._Deprecated_batch_panel import BatchPanel
 
-import webbrowser
-import customtkinter as ctk
-from _Deprecated_gui._Deprecated_styles import COLORS, FONTS, SIZES
-
-
-class MainWindow(ctk.CTk):
-    """主窗口类"""
+class BiliDownloaderGUI:
+    """B站下载器主GUI"""
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self, root):
+        self.root = root
+        self.root.title("B站音频下载器 v1.0")
+        self.root.geometry("1200x800")
         
-        # 窗口设置
-        self.title("B站下载器 v1.0")
-        self.geometry(f"{SIZES['window_width']}x{SIZES['window_height']}")
-        self.minsize(800, 600)
+        # 应用主题
+        AppStyles.apply_theme(root)
         
-        # 创建主框架
-        self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.main_frame.pack(fill="both", expand=True, padx=SIZES['padding'], pady=SIZES['padding'])
+        # 创建主框架 - 使用 pack
+        main_container = ttk.Frame(root)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # 创建标题
-        self.create_title()
+        # 创建菜单
+        self.create_menu()
         
         # 创建标签页
-        self.create_tabview()
+        self.create_notebook(main_container)
         
-        # 创建状态栏（在标签页之后）
-        self.create_status_bar()
+        # 下载控制回调
+        self.download_controller = None
+        
+        # 设置窗口关闭事件
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
     
-    def create_title(self):
-        """创建标题区域"""
-        title_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        title_frame.pack(fill="x", pady=(0, SIZES['padding']))
+    def create_menu(self):
+        """创建菜单栏"""
+        menubar = tk.Menu(self.root, bg=AppStyles.COLORS['bg_medium'],
+                         fg=AppStyles.COLORS['text_primary'])
+        self.root.config(menu=menubar)
         
-        # 标题
-        title_label = ctk.CTkLabel(
-            title_frame,
-            text="🎵 B站下载器",
-            font=FONTS["title"],
-            text_color=COLORS["primary"]
-        )
-        title_label.pack(side="left")
+        # 文件菜单
+        file_menu = tk.Menu(menubar, tearoff=0, bg=AppStyles.COLORS['bg_medium'],
+                           fg=AppStyles.COLORS['text_primary'])
+        menubar.add_cascade(label="文件", menu=file_menu)
+        file_menu.add_command(label="导入设置", command=self.import_settings)
+        file_menu.add_command(label="导出设置", command=self.export_settings)
+        file_menu.add_separator()
+        file_menu.add_command(label="退出", command=self.on_closing)
         
-        # 版本信息
-        version_label = ctk.CTkLabel(
-            title_frame,
-            text="v1.0.0 | 支持视频/音频下载",
-            font=FONTS["small"],
-            text_color=COLORS["text_secondary"]
-        )
-        version_label.pack(side="right")
+        # 帮助菜单
+        help_menu = tk.Menu(menubar, tearoff=0, bg=AppStyles.COLORS['bg_medium'],
+                           fg=AppStyles.COLORS['text_primary'])
+        menubar.add_cascade(label="帮助", menu=help_menu)
+        help_menu.add_command(label="使用说明", command=self.show_help)
+        help_menu.add_command(label="关于", command=self.show_about)
     
-    def create_tabview(self):
+    def create_notebook(self, parent):
         """创建标签页"""
-        self.tabview = ctk.CTkTabview(self.main_frame)
-        self.tabview.pack(fill="both", expand=True)
+        self.notebook = ttk.Notebook(parent)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
         
-        # 添加标签页
-        self.tabview.add("📥 下载")
-        self.tabview.add("⚙️ 设置")
-        self.tabview.add("📊 任务")
-        self.tabview.add("ℹ️ 关于")
+        # 下载页面
+        self.download_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.download_frame, text="📥 下载器")
+        self.download_panel = DownloadPanel(self.download_frame, self.on_download)
         
-        # 先创建任务标签页的内容（确保 tasks_text 存在）
-        self.create_tasks_tab()
+        # 搜索页面
+        self.search_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.search_frame, text="🔍 搜索")
+        self.search_panel = SearchPanel(self.search_frame, self.on_search, self.on_download)
         
-        # 再创建其他标签页
-        self.create_about_tab()
+        # 批量处理页面
+        self.batch_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.batch_frame, text="📋 批量处理")
+        self.batch_panel = BatchPanel(self.batch_frame, self.on_batch_download)
         
-        # 最后创建需要后端的标签页（延迟初始化）
-        from _Deprecated_gui._Deprecated_download_tab import DownloadTab
-        from _Deprecated_gui._Deprecated_settings_tab import SettingsTab
-        
-        self.download_tab = DownloadTab(self.tabview.tab("📥 下载"), self)
-        self.settings_tab = SettingsTab(self.tabview.tab("⚙️ 设置"), self)
+        # 设置页面
+        self.settings_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.settings_frame, text="⚙️ 设置")
+        self.settings_panel = SettingsPanel(self.settings_frame, self.on_settings_changed)
     
-    def create_tasks_tab(self):
-        """创建任务标签页"""
-        tasks_frame = self.tabview.tab("📊 任务")
-        
-        # 任务列表
-        self.tasks_text = ctk.CTkTextbox(tasks_frame, font=FONTS["code"])
-        self.tasks_text.pack(fill="both", expand=True, padx=SIZES['small_padding'], pady=SIZES['small_padding'])
-        
-        # 按钮框架
-        btn_frame = ctk.CTkFrame(tasks_frame, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=SIZES['small_padding'], pady=SIZES['small_padding'])
-        
-        clear_btn = ctk.CTkButton(
-            btn_frame,
-            text="清空日志",
-            command=self.clear_tasks,
-            height=30,
-            width=100
-        )
-        clear_btn.pack(side="right", padx=5)
-    
-    def create_about_tab(self):
-        """创建关于标签页"""
-        about_frame = self.tabview.tab("ℹ️ 关于")
-        
-        # 创建可滚动框架
-        scroll_frame = ctk.CTkScrollableFrame(about_frame)
-        scroll_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
-        # Logo/标题
-        title_label = ctk.CTkLabel(
-            scroll_frame,
-            text="🎵 B站下载器",
-            font=("Microsoft YaHei", 28, "bold"),
-            text_color=COLORS["primary"]
-        )
-        title_label.pack(pady=(20, 5))
-        
-        version_label = ctk.CTkLabel(
-            scroll_frame,
-            text="版本 1.0.0",
-            font=FONTS["body"],
-            text_color=COLORS["text_secondary"]
-        )
-        version_label.pack()
-        
-        # 分隔线
-        separator = ctk.CTkFrame(scroll_frame, height=2, fg_color=COLORS["border"])
-        separator.pack(fill="x", pady=20)
-        
-        # 功能特性
-        features_title = ctk.CTkLabel(
-            scroll_frame,
-            text="✨ 功能特性",
-            font=FONTS["heading"],
-            anchor="w"
-        )
-        features_title.pack(anchor="w", pady=(10, 10))
-        
-        features = [
-            "• 支持视频/音频下载",
-            "• 支持收藏夹批量下载",
-            "• 支持多线程并行下载",
-            "• 可自定义文件名格式",
-            "• 支持搜索和BV号下载",
-            "• 支持公开/私密收藏夹"
-        ]
-        
-        for feature in features:
-            f_label = ctk.CTkLabel(
-                scroll_frame,
-                text=feature,
-                font=FONTS["body"],
-                anchor="w"
-            )
-            f_label.pack(anchor="w", pady=2)
-        
-        # 分隔线
-        separator2 = ctk.CTkFrame(scroll_frame, height=2, fg_color=COLORS["border"])
-        separator2.pack(fill="x", pady=20)
-        
-        # 技术栈
-        tech_title = ctk.CTkLabel(
-            scroll_frame,
-            text="🛠️ 技术栈",
-            font=FONTS["heading"],
-            anchor="w"
-        )
-        tech_title.pack(anchor="w", pady=(10, 10))
-        
-        tech = [
-            "• Python 3.10+",
-            "• CustomTkinter (GUI)",
-            "• FFmpeg (音视频处理)",
-            "• aiohttp (异步下载)"
-        ]
-        
-        for t in tech:
-            t_label = ctk.CTkLabel(
-                scroll_frame,
-                text=t,
-                font=FONTS["body"],
-                anchor="w"
-            )
-            t_label.pack(anchor="w", pady=2)
-        
-        # 分隔线
-        separator3 = ctk.CTkFrame(scroll_frame, height=2, fg_color=COLORS["border"])
-        separator3.pack(fill="x", pady=20)
-        
-        # 链接按钮区域
-        links_title = ctk.CTkLabel(
-            scroll_frame,
-            text="🔗 相关链接",
-            font=FONTS["heading"],
-            anchor="w"
-        )
-        links_title.pack(anchor="w", pady=(10, 10))
-        
-        # 按钮框架
-        links_frame = ctk.CTkFrame(scroll_frame, fg_color="transparent")
-        links_frame.pack(fill="x", pady=10)
-        
-        # GitHub按钮
-        github_btn = ctk.CTkButton(
-            links_frame,
-            text="📂 GitHub 仓库",
-            command=self.open_github,
-            height=35,
-            width=150,
-            fg_color="#333333",
-            hover_color="#444444"
-        )
-        github_btn.pack(side="left", padx=10)
-        
-        # 文档按钮
-        docs_btn = ctk.CTkButton(
-            links_frame,
-            text="📖 使用文档",
-            command=self.open_docs,
-            height=35,
-            width=150,
-            fg_color=COLORS["primary"],
-            hover_color=COLORS["primary_hover"]
-        )
-        docs_btn.pack(side="left", padx=10)
-        
-        # 反馈按钮
-        feedback_btn = ctk.CTkButton(
-            links_frame,
-            text="💬 问题反馈",
-            command=self.open_issues,
-            height=35,
-            width=150,
-            fg_color="#722ED1",
-            hover_color="#8B3FF0"
-        )
-        feedback_btn.pack(side="left", padx=10)
-        
-        # 贡献者信息
-        separator4 = ctk.CTkFrame(scroll_frame, height=2, fg_color=COLORS["border"])
-        separator4.pack(fill="x", pady=20)
-        
-        contributors_label = ctk.CTkLabel(
-            scroll_frame,
-            text="👥 贡献者",
-            font=FONTS["heading"],
-            anchor="w"
-        )
-        contributors_label.pack(anchor="w", pady=(10, 10))
-        
-        contributors_text = ctk.CTkLabel(
-            scroll_frame,
-            text="罗逸琳 (Buelier, LUO Yiling)  |  DeepSeek",
-            font=FONTS["body"],
-            text_color=COLORS["text_secondary"]
-        )
-        contributors_text.pack()
-        
-        # 版权信息
-        copyright_label = ctk.CTkLabel(
-            scroll_frame,
-            text="© 2024 B站下载器 | 仅供学习交流使用",
-            font=FONTS["small"],
-            text_color=COLORS["text_secondary"]
-        )
-        copyright_label.pack(pady=(20, 10))
-
-    def open_github(self):
-        """打开GitHub仓库"""
-        import webbrowser
-        webbrowser.open("https://github.com/Buelier/bili-downloader")
-
-    def open_docs(self):
-        """打开使用文档"""
-        import webbrowser
-        webbrowser.open("https://github.com/Buelier/bili-downloader/wiki")
-
-    def open_issues(self):
-        """打开问题反馈页面"""
-        import webbrowser
-        webbrowser.open("https://github.com/Buelier/bili-downloader/issues")
-    
-    def create_status_bar(self):
-        """创建状态栏"""
-        self.status_frame = ctk.CTkFrame(self.main_frame, height=30)
-        self.status_frame.pack(fill="x", pady=(SIZES['small_padding'], 0))
-        
-        self.status_label = ctk.CTkLabel(
-            self.status_frame,
-            text="就绪",
-            font=FONTS["small"],
-            text_color=COLORS["text_secondary"]
-        )
-        self.status_label.pack(side="left", padx=10)
-        
-        self.progress_bar = ctk.CTkProgressBar(self.status_frame, width=200)
-        self.progress_bar.pack(side="right", padx=10)
-        self.progress_bar.set(0)
-    
-    def update_status(self, message: str, progress: float = None):
-        """更新状态栏"""
-        self.status_label.configure(text=message)
-        if progress is not None:
-            self.progress_bar.set(progress)
-        self.update_idletasks()
-    
-    def log_message(self, message: str):
-        """添加日志消息"""
-        from datetime import datetime
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        # 确保 tasks_text 存在
-        if hasattr(self, 'tasks_text') and self.tasks_text is not None:
-            self.tasks_text.insert("end", f"[{timestamp}] {message}\n")
-            self.tasks_text.see("end")
+    def on_download(self, url_or_bvid, download_format, progress_callback):
+        """下载回调"""
+        if self.download_controller:
+            import time
+            task_id = f"task_{int(time.time() * 1000)}"
+            
+            # 添加到下载面板显示
+            video_name = self.extract_video_name(url_or_bvid)
+            self.download_panel.add_task_to_queue(task_id, video_name)
+            
+            # 在新线程中执行下载
+            import threading
+            def download_task():
+                try:
+                    result = self.download_controller.download(
+                        url_or_bvid, 
+                        download_format,
+                        lambda progress, status: progress_callback(task_id, progress, status)
+                    )
+                    if result:
+                        progress_callback(task_id, 100, "下载完成")
+                except Exception as e:
+                    progress_callback(task_id, 0, f"错误: {str(e)}")
+            
+            thread = threading.Thread(target=download_task, daemon=True)
+            thread.start()
         else:
-            print(f"[{timestamp}] {message}")
-        self.update_idletasks()
+            print("下载控制器未设置")
     
-    def clear_tasks(self):
-        """清空任务日志"""
-        if hasattr(self, 'tasks_text') and self.tasks_text is not None:
-            self.tasks_text.delete("1.0", "end")
+    def on_search(self, keyword):
+        """搜索回调"""
+        if self.download_controller:
+            try:
+                results = self.download_controller.search(keyword)
+                return results
+            except Exception as e:
+                print(f"搜索错误: {e}")
+                return []
+        return []
+    
+    def on_batch_download(self, url_list, download_format, status_callback):
+        """批量下载回调"""
+        if self.download_controller:
+            import threading
+            def batch_task():
+                for url in url_list:
+                    try:
+                        status_callback(url, "下载中...", True)
+                        self.download_controller.download(url, download_format, None)
+                        status_callback(url, "下载完成", True)
+                    except Exception as e:
+                        status_callback(url, f"失败: {str(e)}", False)
+            
+            thread = threading.Thread(target=batch_task, daemon=True)
+            thread.start()
+    
+    def on_settings_changed(self, settings):
+        """设置变更回调"""
+        if self.download_controller:
+            self.download_controller.update_settings(settings)
+    
+    def extract_video_name(self, url_or_bvid):
+        """提取视频名称"""
+        return f"视频_{url_or_bvid[-8:]}"
+    
+    def set_download_controller(self, controller):
+        """设置下载控制器"""
+        self.download_controller = controller
+    
+    def import_settings(self):
+        """导入设置"""
+        from tkinter import filedialog, messagebox
+        import json
+        
+        filename = filedialog.askopenfilename(
+            title="导入设置",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+        )
+        if filename:
+            try:
+                with open(filename, 'r', encoding='utf-8') as f:
+                    settings = json.load(f)
+                messagebox.showinfo("成功", "设置导入成功！")
+            except Exception as e:
+                messagebox.showerror("错误", f"导入失败: {str(e)}")
+    
+    def export_settings(self):
+        """导出设置"""
+        from tkinter import filedialog, messagebox
+        import json
+        
+        filename = filedialog.asksaveasfilename(
+            title="导出设置",
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+        )
+        if filename:
+            try:
+                settings = self.settings_panel.get_settings()
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(settings, f, ensure_ascii=False, indent=2)
+                messagebox.showinfo("成功", "设置导出成功！")
+            except Exception as e:
+                messagebox.showerror("错误", f"导出失败: {str(e)}")
+    
+    def show_help(self):
+        """显示帮助信息"""
+        from tkinter import messagebox
+        
+        help_text = """B站音频下载器使用说明
+
+1. 下载视频：
+   - 在下载器页面输入BV号或视频链接
+   - 选择下载格式后点击下载
+
+2. 搜索视频：
+   - 在搜索页面输入关键词
+   - 双击搜索结果即可下载
+
+3. 批量下载：
+   - 在批量处理页面输入多个BV号
+   - 每行一个，点击开始批量下载
+
+4. 设置：
+   - 可设置保存目录、并行下载数等
+   - 支持自定义文件名格式
+
+注意：请遵守B站相关使用条款。
+"""
+        messagebox.showinfo("使用说明", help_text)
+    
+    def show_about(self):
+        """显示关于信息"""
+        from tkinter import messagebox
+        
+        about_text = """B站音频下载器 v1.0
+
+项目贡献者：
+- 罗逸琳 (Buelier, LUO Yiling)
+- DeepSeek
+
+功能特性：
+- 支持视频/音频下载
+- 支持搜索功能
+- 支持批量下载
+- 支持收藏夹下载
+- 跨平台支持
+
+基于 Python3 + tkinter 开发
+"""
+        messagebox.showinfo("关于", about_text)
+    
+    def on_closing(self):
+        """关闭窗口时的处理"""
+        from tkinter import messagebox
+        
+        if messagebox.askokcancel("退出", "确定要退出吗？"):
+            if self.download_controller:
+                self.download_controller.stop_all()
+            self.root.destroy()

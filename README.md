@@ -1,4 +1,4 @@
-**中文 ( CHINESE ) |  [ English ( 英文 ) ](#)  |  [ More Languages (更多语言) ](#)**
+**中文 ( CHINESE ) |  [ English ( 英文 ) ](README.EN.md)  |  [ More Languages (更多语言) ](#)**
 # 简介
 **该工具可以帮助你愉快地在`Windows`(电脑的Windows系统坏了所以没有打包，求好心人帮个忙打包下exe)/`Linux`/`Android`(Termux&ZeroTermux等软件)等平台上面下载B站上面下载视频。此工具主要为下载收藏夹(无论是`公开的`还是`私有的`，都可以下载)而生，~~毕竟这就是因为我实在找不到能满足我需求的工具而做的一堆BUG~~**
 

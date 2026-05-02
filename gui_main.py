@@ -14,12 +14,6 @@ def main():
     config = Config()
 
     cookie = config.get('cookie')
-    if not cookie and config.get('need_login'):
-        from tkinter import simpledialog
-        cookie = simpledialog.askstring("登录", "请输入SESSDATA (留空跳过):", show='*')
-        if cookie:
-            config.set('cookie', cookie)
-
     api = BiliAPI(cookie)
     downloader = VideoDownloader(config, api)
 

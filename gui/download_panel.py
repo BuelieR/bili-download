@@ -1,7 +1,7 @@
 import customtkinter as ctk
 import threading
 import time
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict
 
 from gui.styles import AppStyles
 
@@ -10,7 +10,7 @@ class DownloadPanel(ctk.CTkFrame):
     def __init__(self, parent, on_download_callback: Callable):
         super().__init__(parent, fg_color=AppStyles.COLORS['bg_dark'])
         self.on_download_callback = on_download_callback
-        self.download_tasks = {}
+        self.download_tasks: Dict[str, Dict] = {}
         self._setup_ui()
 
     def _setup_ui(self):
@@ -23,8 +23,12 @@ class DownloadPanel(ctk.CTkFrame):
         url_label = AppStyles.create_label(input_frame, text="BV号 / 视频链接:")
         url_label.pack(pady=(15, 5), padx=15, anchor='w')
 
-        self.url_entry = AppStyles.create_entry(input_frame, placeholder_text="输入BV号或完整链接，如: BV1xx4y1d7zc")
+        self.url_entry = AppStyles.create_entry(
+            input_frame,
+            placeholder_text="输入BV号或完整链接，如: BV1xx4y1d7zc"
+        )
         self.url_entry.pack(fill='x', padx=15, pady=(0, 10))
+        self._setup_entry_shortcuts(self.url_entry)
 
         type_frame = ctk.CTkFrame(input_frame, fg_color='transparent')
         type_frame.pack(fill='x', padx=15, pady=(0, 15))
@@ -43,12 +47,22 @@ class DownloadPanel(ctk.CTkFrame):
         self.download_type.set("audio")
         self.download_type.pack(side='left')
 
+        hint_label = ctk.CTkLabel(
+            type_frame,
+            text="audio=仅音频 | video=仅视频 | all=完整视频",
+            text_color=AppStyles.COLORS['text_secondary'],
+            font=AppStyles.FONTS['small']
+        )
+        hint_label.pack(side='left', padx=(20, 0))
+
         self.download_btn = AppStyles.create_button(
             input_frame,
             text="开始下载",
             command=self._start_download
         )
         self.download_btn.pack(fill='x', padx=15, pady=(0, 15))
+
+        self.url_entry.bind('<Return>', lambda e: self._start_download())
 
         self.task_list_frame = AppStyles.create_card_frame(self)
         self.task_list_frame.pack(fill='both', expand=True, padx=20, pady=10)
@@ -61,31 +75,38 @@ class DownloadPanel(ctk.CTkFrame):
             fg_color='transparent'
         )
         self.task_scroll.pack(fill='both', expand=True, padx=10, pady=5)
-    
-    def _setup_shortcuts(self):
-        self.url_entry.bind('<Control-a>', self._select_all)
-        self.url_entry.bind('<Control-A>', self._select_all)
-        self.url_entry.bind('<Control-c>', self._copy_text)
-        self.url_entry.bind('<Control-C>', self._copy_text)
-        self.url_entry.bind('<Control-x>', self._cut_text)
-        self.url_entry.bind('<Control-X>', self._cut_text)
-        self.url_entry.bind('<Control-v>', self._paste_text)
-        self.url_entry.bind('<Control-V>', self._paste_text)
-    
+
+        self.empty_tip = AppStyles.create_label(
+            self.task_scroll,
+            text="输入BV号或链接开始下载",
+            text_color=AppStyles.COLORS['text_secondary']
+        )
+        self.empty_tip.pack(pady=20)
+
+    def _setup_entry_shortcuts(self, entry):
+        entry.bind('<Control-a>', self._select_all)
+        entry.bind('<Control-A>', self._select_all)
+        entry.bind('<Control-c>', self._copy_text)
+        entry.bind('<Control-C>', self._copy_text)
+        entry.bind('<Control-x>', self._cut_text)
+        entry.bind('<Control-X>', self._cut_text)
+        entry.bind('<Control-v>', self._paste_text)
+        entry.bind('<Control-V>', self._paste_text)
+
     def _select_all(self, event):
-        self.url_entry.select_range(0, 'end')
+        event.widget.select_range(0, 'end')
         return 'break'
-    
+
     def _copy_text(self, event):
-        self.url_entry.event_generate('<<Copy>>')
+        event.widget.event_generate('<<Copy>>')
         return 'break'
-    
+
     def _cut_text(self, event):
-        self.url_entry.event_generate('<<Cut>>')
+        event.widget.event_generate('<<Cut>>')
         return 'break'
-    
+
     def _paste_text(self, event):
-        self.url_entry.event_generate('<<Paste>>')
+        event.widget.event_generate('<<Paste>>')
         return 'break'
 
     def _start_download(self):
@@ -95,6 +116,9 @@ class DownloadPanel(ctk.CTkFrame):
 
         download_type = self.download_type.get()
         task_id = f"task_{int(time.time() * 1000)}"
+
+        if self.empty_tip.winfo_exists():
+            self.empty_tip.pack_forget()
 
         self._add_task_to_queue(task_id, url_or_bvid)
 
@@ -115,7 +139,7 @@ class DownloadPanel(ctk.CTkFrame):
 
     def _add_task_to_queue(self, task_id: str, video_name: str):
         task_frame = ctk.CTkFrame(self.task_scroll, fg_color=AppStyles.COLORS['bg_light'])
-        task_frame.pack(fill='x', pady=5)
+        task_frame.pack(fill='x', pady=5, padx=5)
 
         info_frame = ctk.CTkFrame(task_frame, fg_color='transparent')
         info_frame.pack(fill='x', padx=10, pady=5)
@@ -129,13 +153,36 @@ class DownloadPanel(ctk.CTkFrame):
         )
         name_label.pack(anchor='w')
 
+        progress_frame = ctk.CTkFrame(task_frame, fg_color='transparent')
+        progress_frame.pack(fill='x', padx=10)
+
+        progress_bar = ctk.CTkProgressBar(progress_frame, progress_color=AppStyles.COLORS['accent'])
+        progress_bar.pack(side='left', fill='x', expand=True, padx=(0, 10))
+        progress_bar.set(0)
+
+        progress_label = ctk.CTkLabel(
+            progress_frame,
+            text="0%",
+            text_color=AppStyles.COLORS['text_secondary'],
+            font=AppStyles.FONTS['small'],
+            width=40
+        )
+        progress_label.pack(side='right')
+
+        status_label = ctk.CTkLabel(
+            task_frame,
+            text="等待中...",
+            text_color=AppStyles.COLORS['accent'],
+            font=AppStyles.FONTS['small']
+        )
+        status_label.pack(padx=10, pady=(0, 5), anchor='w')
+
         self.download_tasks[task_id] = {
             'frame': task_frame,
-            'progress': ctk.CTkProgressBar(task_frame, progress_color=AppStyles.COLORS['accent']),
-            'status_label': None
+            'progress': progress_bar,
+            'progress_label': progress_label,
+            'status_label': status_label
         }
-        self.download_tasks[task_id]['progress'].pack(fill='x', padx=10, pady=(0, 5))
-        self.download_tasks[task_id]['progress'].set(0)
 
     def _update_task_progress(self, task_id: str, progress: float, status: str):
         if task_id not in self.download_tasks:
@@ -143,17 +190,26 @@ class DownloadPanel(ctk.CTkFrame):
 
         def update():
             self.download_tasks[task_id]['progress'].set(progress / 100.0)
-            if self.download_tasks[task_id]['status_label']:
-                self.download_tasks[task_id]['status_label'].destroy()
+            self.download_tasks[task_id]['progress_label'].configure(text=f"{int(progress)}%")
 
-            color = AppStyles.COLORS['success'] if progress >= 100 else AppStyles.COLORS['accent']
-            status_label = ctk.CTkLabel(
-                self.download_tasks[task_id]['frame'],
-                text=status,
-                text_color=color,
-                font=AppStyles.FONTS['small']
-            )
-            status_label.pack(pady=(0, 5))
-            self.download_tasks[task_id]['status_label'] = status_label
+            if progress >= 100:
+                color = AppStyles.COLORS['success']
+            elif '错误' in status or '失败' in status:
+                color = AppStyles.COLORS['error']
+            else:
+                color = AppStyles.COLORS['accent']
+
+            self.download_tasks[task_id]['status_label'].configure(text=status, text_color=color)
 
         self.after(0, update)
+
+    def add_download_task(self, task_id: str, video_name: str, progress: float = 0, status: str = "等待中..."):
+        if task_id in self.download_tasks:
+            self._update_task_progress(task_id, progress, status)
+            return
+
+        if self.empty_tip.winfo_exists():
+            self.empty_tip.pack_forget()
+
+        self._add_task_to_queue(task_id, video_name)
+        self._update_task_progress(task_id, progress, status)

@@ -1,0 +1,9 @@
+# Kivy版本依赖
+kivy>=2.3.0
+aiohttp>=3.8.0
+aiofiles>=23.0.0
+requests>=2.28.0
+plyer>=2.1.0
+
+# Buildozer配置（用于Android打包）
+buildozer>=1.5.0

@@ -50,6 +50,7 @@ class SettingsPanel(ctk.CTkFrame):
             placeholder_text="下载保存路径"
         )
         self.widgets['save_dir'].pack(side='left', fill='x', expand=True)
+        self._setup_entry_shortcuts(self.widgets['save_dir'])
 
         browse_btn = AppStyles.create_button(
             path_frame,
@@ -90,6 +91,7 @@ class SettingsPanel(ctk.CTkFrame):
             placeholder_text="0"
         )
         self.widgets['max_speed_mbps'].pack(side='left')
+        self._setup_entry_shortcuts(self.widgets['max_speed_mbps'])
 
         lbl3 = ctk.CTkLabel(row2, text="0表示不限速", text_color=AppStyles.COLORS['text_secondary'])
         lbl3.pack(side='left', padx=(10, 0))
@@ -121,6 +123,7 @@ class SettingsPanel(ctk.CTkFrame):
             placeholder_text="输入SESSDATA (留空清除)"
         )
         self.widgets['cookie'].pack(fill='x', expand=True)
+        self._setup_entry_shortcuts(self.widgets['cookie'])
 
         hint = ctk.CTkLabel(
             section,
@@ -169,6 +172,32 @@ class SettingsPanel(ctk.CTkFrame):
             command=self._export_settings
         )
         export_btn.pack(side='right', padx=(10, 0))
+
+    def _setup_entry_shortcuts(self, entry):
+        entry.bind('<Control-a>', self._select_all)
+        entry.bind('<Control-A>', self._select_all)
+        entry.bind('<Control-c>', self._copy_text)
+        entry.bind('<Control-C>', self._copy_text)
+        entry.bind('<Control-x>', self._cut_text)
+        entry.bind('<Control-X>', self._cut_text)
+        entry.bind('<Control-v>', self._paste_text)
+        entry.bind('<Control-V>', self._paste_text)
+
+    def _select_all(self, event):
+        event.widget.select_range(0, 'end')
+        return 'break'
+
+    def _copy_text(self, event):
+        event.widget.event_generate('<<Copy>>')
+        return 'break'
+
+    def _cut_text(self, event):
+        event.widget.event_generate('<<Cut>>')
+        return 'break'
+
+    def _paste_text(self, event):
+        event.widget.event_generate('<<Paste>>')
+        return 'break'
 
     def _load_settings(self):
         if not self.config:

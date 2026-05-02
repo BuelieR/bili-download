@@ -26,28 +26,48 @@ class VideoDownloader:
         self.speed_limiter = SpeedLimiter(config.get('max_speed_mbps', 0))
         self.path_manager = PathManager(config)
         self.max_retry = config.get('auto_retry', 3)
+        self.progress_callback = None
     
-    async def download_video(self, bvid: str, download_type: str) -> Optional[Path]:
+    def set_progress_callback(self, callback):
+        """设置进度回调函数"""
+        self.progress_callback = callback
+    
+    def _update_progress(self, progress, status):
+        """更新进度"""
+        if self.progress_callback:
+            self.progress_callback(progress, status)
+    
+    async def download_video(self, bvid: str, download_type: str, progress_callback=None) -> Optional[Path]:
         """
         下载视频主流程
+        :param bvid: BV号
+        :param download_type: 下载类型 (audio/video/all)
+        :param progress_callback: 进度回调函数 (progress, status)
         """
+        self.progress_callback = progress_callback
+        
         try:
+            self._update_progress(0, "开始下载...")
             # 设置5分钟(60s*5=300s)超时
             return await asyncio.wait_for(
                 self._download_video_impl(bvid, download_type),
                 timeout=300
             )
         except asyncio.TimeoutError:
+            self._update_progress(0, "下载超时")
             print(f"下载超时 (超过5分钟)，跳过")
             return None
         except Exception as e:
+            self._update_progress(0, f"下载异常: {str(e)}")
             print(f"下载异常: {e}")
             return None
 
     async def _download_video_impl(self, bvid: str, download_type: str) -> Optional[Path]:
         """下载"""
+        self._update_progress(5, "获取视频信息...")
         info = self.api.get_video_info(bvid)
         if not info:
+            self._update_progress(0, "获取视频信息失败")
             print(f"获取视频信息失败: {bvid}")
             return None
         
@@ -60,9 +80,11 @@ class VideoDownloader:
     
     async def _download_single(self, bvid: str, cid: int, title: str, author: str, download_type: str) -> Optional[Path]:
         """下载单个视频"""
+        self._update_progress(10, "获取下载链接...")
         play_data = self.api.get_download_url(bvid, cid)
         
         if not play_data or 'dash' not in play_data:
+            self._update_progress(0, "无法获取下载链接")
             print("无法获取下载链接")
             return None
         
@@ -75,17 +97,22 @@ class VideoDownloader:
         else:  # all
             output_path = await self._download_and_merge(play_data, title, author)
         
+        if output_path:
+            self._update_progress(100, "下载完成")
         return output_path
     
     async def _download_audio_only(self, play_data: Dict, title: str, author: str) -> Optional[Path]:
         """仅下载音频并转为MP3"""
         audio_url = play_data.get('dash', {}).get('audio', [{}])[0].get('base_url')
         if not audio_url:
+            self._update_progress(0, "未找到音频流")
             print("未找到音频流")
             return None
         
+        self._update_progress(15, "下载音频流...")
         temp_path = self.path_manager.get_temp_path(title)
-        if await self._download_file(audio_url, temp_path):
+        if await self._download_file_with_progress(audio_url, temp_path, "音频"):
+            self._update_progress(85, "转换为MP3...")
             mp3_path = self.path_manager.get_output_path(title, author, 'mp3')
             if self._convert_to_mp3(temp_path, mp3_path):
                 temp_path.unlink()
@@ -96,11 +123,13 @@ class VideoDownloader:
         """仅下载视频(无声)"""
         video_url = play_data.get('dash', {}).get('video', [{}])[0].get('base_url')
         if not video_url:
+            self._update_progress(0, "未找到视频流")
             print("未找到视频流")
             return None
         
+        self._update_progress(15, "下载视频流...")
         video_path = self.path_manager.get_output_path(title, author, 'mp4')
-        if await self._download_file(video_url, video_path):
+        if await self._download_file_with_progress(video_url, video_path, "视频"):
             return video_path
         return None
     
@@ -110,6 +139,7 @@ class VideoDownloader:
         audio_list = play_data.get('dash', {}).get('audio', [])
         
         if not video_list:
+            self._update_progress(0, "未找到视频流")
             print("未找到视频流")
             return None
         
@@ -126,13 +156,14 @@ class VideoDownloader:
         audio_url = audio_list[0].get('base_url')
         
         if not video_url or not audio_url:
+            self._update_progress(0, "无法获取下载链接")
             print("无法获取下载链接")
             return None
         
         temp_video = self.path_manager.get_temp_path(f"{title}_video")
         temp_audio = self.path_manager.get_temp_path(f"{title}_audio")
         
-        print("下载视频流...")
+        self._update_progress(15, "下载视频流...")
         video_ok = await self._download_file_with_progress(video_url, temp_video, "视频")
         
         #备用视频链接
@@ -142,10 +173,11 @@ class VideoDownloader:
             if video_url:
                 video_ok = await self._download_file_with_progress(video_url, temp_video, "视频备用")
         
-        print("下载音频流...")
+        self._update_progress(50, "下载音频流...")
         audio_ok = await self._download_file_with_progress(audio_url, temp_audio, "音频")
         
         if video_ok and audio_ok:
+            self._update_progress(80, "合并视频和音频...")
             print(f"正在合并视频和音频...")
             if self._merge_video_audio(temp_video, temp_audio, output_path):
                 temp_video.unlink()
@@ -153,9 +185,11 @@ class VideoDownloader:
                 print(f"✓ 合并完成")
                 return output_path
             else:
+                self._update_progress(0, "合并失败")
                 print("合并失败")
         else:
             if not video_ok:
+                self._update_progress(0, "视频流下载失败（可能需要登录）")
                 print("视频流下载失败（可能是需要登录或链接已过期）")
             if audio_ok:
                 audio_output = self.path_manager.get_output_path(title, author, 'mp3')

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 DEFAULT_CONFIG: Dict[str, Any] = {
-    "save_dir": "/home/buelier/BiliDownloads",
+    "save_dir": "/BiliDownloads",
     "max_parallel": 3,
     "max_speed_mbps": 0,
     "filename_format": "${video_name}_AUTHOR_${video_author}",

@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.deb
+*.sh
+!package.sh
+*.json
+package/
+bili-downloader-web-1.0.0/
+build/
+dist/
+dists/
+*.spec
+*.tar.gz
+!package_web.sh
+.buildozer/

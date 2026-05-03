@@ -10,7 +10,6 @@ import platform
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-
 if sys.platform.startswith('linux'):
     username = os.getlogin()
     save_dir = f"/home/{username}/BiliDownloads"

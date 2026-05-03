@@ -14,3 +14,4 @@ dists/
 !package_web.sh
 .buildozer/
 .fuse_hidden*
+BiliDownloads/

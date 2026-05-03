@@ -288,7 +288,7 @@ class VideoDownloader:
             "-q:a", "2", "-y", str(output_path)
         ]
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', timeout=120)
             if result.returncode != 0:
                 print(f"FFmpeg错误: {result.stderr[:200]}")
             return result.returncode == 0
@@ -351,7 +351,9 @@ class VideoDownloader:
                 cmd, 
                 stdout=subprocess.PIPE, 
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
+                encoding='utf-8',
+                errors='ignore'
             )
             
             last_progress = 0
@@ -378,7 +380,7 @@ class VideoDownloader:
                     "-c:v", "libx264", "-c:a", "aac", "-crf", "23",
                     "-y", str(output_path)
                 ]
-                process2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=180)
+                process2 = subprocess.run(cmd2, capture_output=True, text=True, encoding='utf-8', errors='ignore', timeout=180)
                 if process2.returncode != 0:
                     print(f"\n  FFmpeg错误: {process2.stderr[:200]}")
                     return False

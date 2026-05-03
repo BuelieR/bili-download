@@ -5,11 +5,25 @@
 
 import json
 import os
+import sys
+import platform
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+
+if sys.platform.startswith('linux'):
+    username = os.getlogin()
+    save_dir = f"/home/{username}/BiliDownloads"
+elif sys.platform.startswith('win'):
+    save_dir = f"/BiliDownloads"
+elif sys.platform.startswith('darwin'):
+    username = os.getlogin()
+    save_dir = f"/home/{username}/BiliDownloads"
+else:
+    save_dir = f"/BiliDownloads"
+
 DEFAULT_CONFIG: Dict[str, Any] = {
-    "save_dir": "/home/buelier/BiliDownloads",
+    "save_dir": save_dir,
     "max_parallel": 3,
     "max_speed_mbps": 0,
     "filename_format": "${video_name}_AUTHOR_${video_author}",

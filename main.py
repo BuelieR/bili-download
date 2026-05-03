@@ -6,7 +6,6 @@ from api.bili_api import BiliAPI
 from downloader.video_downloader import VideoDownloader
 from cli import BiliCLI
 
-VERSION = "1.0.1"
 def main():
     config = Config()
     

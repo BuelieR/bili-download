@@ -13,3 +13,4 @@ dists/
 *.tar.gz
 !package_web.sh
 .buildozer/
+.fuse_hidden*

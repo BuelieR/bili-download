@@ -11,7 +11,7 @@ def main():
     
     # 登录(如需要)
     cookie = config.get('cookie')
-    if not cookie and config.get('need_login'):
+    if not cookie:
         cookie = input("请输入SESSDATA(按回车跳过): ").strip()
         if cookie:
             config.set('cookie', cookie)

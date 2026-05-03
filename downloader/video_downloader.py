@@ -6,6 +6,7 @@ import asyncio
 import aiohttp
 import aiofiles
 import subprocess
+import shutil
 from pathlib import Path
 from typing import Optional, Dict, Any
 import time
@@ -298,19 +299,54 @@ class VideoDownloader:
             print(f"转换失败: {e}")
             return False
     
+    def _find_ffmpeg(self) -> str:
+        """查找FFmpeg可执行文件路径"""
+        import os
+        
+        def is_exe(fpath):
+            return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+        
+        ffmpeg_names = ['ffmpeg', 'ffmpeg.exe']
+        
+        for name in ffmpeg_names:
+            if is_exe(name):
+                return name
+            
+            path = shutil.which(name)
+            if path:
+                return path
+        
+        common_paths = [
+            'C:\\ffmpeg\\bin\\ffmpeg.exe',
+            'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
+            'C:\\Program Files (x86)\\ffmpeg\\bin\\ffmpeg.exe',
+            '/usr/bin/ffmpeg',
+            '/usr/local/bin/ffmpeg'
+        ]
+        
+        for path in common_paths:
+            if is_exe(path):
+                return path
+        
+        return None
+    
     def _merge_video_audio(self, video_path: Path, audio_path: Path, output_path: Path) -> bool:
         """合并视频和音频，带进度显示"""
         print("  正在合并 (可能需要1-2分钟)...")
         
+        ffmpeg_path = self._find_ffmpeg()
+        if not ffmpeg_path:
+            print("  错误: 未找到FFmpeg，请安装FFmpeg并加入系统PATH")
+            return False
+        
         cmd = [
-            "ffmpeg", "-i", str(video_path), "-i", str(audio_path),
+            ffmpeg_path, "-i", str(video_path), "-i", str(audio_path),
             "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
             "-map", "0:v:0", "-map", "1:a:0",
             "-shortest", "-y", str(output_path)
         ]
         
         try:
-            # Popen 实时输出进度
             process = subprocess.Popen(
                 cmd, 
                 stdout=subprocess.PIPE, 
@@ -318,20 +354,17 @@ class VideoDownloader:
                 text=True
             )
             
-            # stderr 中的进度信息
             last_progress = 0
             while True:
                 line = process.stderr.readline()
                 if not line and process.poll() is not None:
                     break
                 if 'time=' in line:
-                    # 时间进度
                     import re
                     match = re.search(r'time=(\d{2}):(\d{2}):(\d{2})', line)
                     if match:
                         hours, minutes, seconds = map(int, match.groups())
                         total_seconds = hours * 3600 + minutes * 60 + seconds
-                        # 估算进度
                         progress = min(int(total_seconds / 300 * 100), 99)
                         if progress > last_progress:
                             print(f"  合并进度: {progress}%", end='\r')
@@ -340,9 +373,8 @@ class VideoDownloader:
             process.wait(timeout=180)
             
             if process.returncode != 0:
-                # 备用方案
                 cmd2 = [
-                    "ffmpeg", "-i", str(video_path), "-i", str(audio_path),
+                    ffmpeg_path, "-i", str(video_path), "-i", str(audio_path),
                     "-c:v", "libx264", "-c:a", "aac", "-crf", "23",
                     "-y", str(output_path)
                 ]
@@ -354,6 +386,9 @@ class VideoDownloader:
             print("  合并进度: 100%")
             return True
             
+        except FileNotFoundError:
+            print(f"\n  错误: 无法找到FFmpeg，请安装FFmpeg并加入系统PATH")
+            return False
         except subprocess.TimeoutExpired:
             process.kill()
             print("\n  合并超时")

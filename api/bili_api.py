@@ -4,10 +4,12 @@ B站API封装模块
 
 import re
 import time
+import os
 import requests
 from typing import Optional, List, Dict, Any
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from urllib3.exceptions import InsecureRequestWarning
 from models.video_info import VideoInfo
 
 
@@ -17,7 +19,6 @@ class BiliAPI:
     def __init__(self, cookie: Optional[str] = None):
         self.session = requests.Session()
         
-        # 重试机制
         retry_strategy = Retry(
             total=3,
             backoff_factor=1,
@@ -32,8 +33,27 @@ class BiliAPI:
             "Referer": "https://www.bilibili.com",
             "Accept-Language": "zh-CN,zh;q=0.9"
         })
+        
+        self._setup_proxy()
+        
         if cookie:
             self.set_cookie(cookie)
+    
+    def _setup_proxy(self):
+        """配置代理和SSL验证"""
+        http_proxy = os.environ.get('HTTP_PROXY') or os.environ.get('http_proxy')
+        https_proxy = os.environ.get('HTTPS_PROXY') or os.environ.get('https_proxy')
+        
+        if http_proxy or https_proxy:
+            proxies = {}
+            if http_proxy:
+                proxies['http'] = http_proxy
+            if https_proxy:
+                proxies['https'] = https_proxy
+            self.session.proxies.update(proxies)
+            
+            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+            self.session.verify = False
     
     def set_cookie(self, cookie: str):
         """设置SESSDATA Cookie"""
@@ -157,8 +177,7 @@ class BiliAPI:
             if self.session.cookies.get("SESSDATA"):
                 headers["Cookie"] = f"SESSDATA={self.session.cookies.get('SESSDATA')}"
             
-            # requests直接请求
-            response = requests.get(url, params=params, headers=headers, timeout=10)
+            response = self.session.get(url, params=params, headers=headers, timeout=10)
             
             # 检查响应状态
             if response.status_code != 200:
@@ -229,7 +248,7 @@ class BiliAPI:
         }
         
         try:
-            response = requests.get(url, params=params, headers=headers, timeout=10)
+            response = self.session.get(url, params=params, headers=headers, timeout=10)
             
             if response.status_code != 200:
                 return []

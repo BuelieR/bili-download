@@ -13,12 +13,12 @@ from typing import Any, Dict, Optional
 
 if sys.platform.startswith('linux'):
     username = os.getlogin()
-    save_dir = f"/home/${username}/BiliDownloads"
+    save_dir = f"/home/{username}/BiliDownloads"
 elif sys.platform.startswith('win'):
     save_dir = f"/BiliDownloads"
 elif sys.platform.startswith('darwin'):
     username = os.getlogin()
-    save_dir = f"/home/${username}/BiliDownloads"
+    save_dir = f"/home/{username}/BiliDownloads"
 else:
     save_dir = f"/BiliDownloads"
 

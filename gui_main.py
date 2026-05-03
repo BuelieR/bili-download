@@ -17,7 +17,7 @@ def main():
     api = BiliAPI(cookie)
     downloader = VideoDownloader(config, api)
 
-    app = MainWindow(config, api, downloader)
+    app = MainWindow(config, api, downloader, VERSION)
     app.run()
 
 

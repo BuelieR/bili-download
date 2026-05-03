@@ -14,7 +14,7 @@ from gui.history_panel import HistoryPanel
 
 
 class MainWindow(ctk.CTk):
-    def __init__(self, config, api, downloader):
+    def __init__(self, config, api, downloader, version:str = "0.0.0"):
         super().__init__()
 
         self.config = config
@@ -23,6 +23,7 @@ class MainWindow(ctk.CTk):
         self.current_theme = 'dark'
 
         self.title("B站下载器")
+        self.version = version
         self.geometry("1100x750")
         self.minsize(900, 600)
 
@@ -114,7 +115,7 @@ class MainWindow(ctk.CTk):
 
         self.version_label = AppStyles.create_label(
             self.sidebar,
-            text="v2.0.0",
+            text=f"{self.version}",
             text_color=AppStyles.COLORS['text_disabled'],
             font=AppStyles.FONTS['small']
         )

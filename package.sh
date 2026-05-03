@@ -5,7 +5,7 @@ set -e
 umask 022
 
 APP_NAME="bili-downloader"
-VERSION="2.0.0"
+VERSION="1.0.2"
 AUTHOR="BuelieR"
 
 RED='\033[0;31m'

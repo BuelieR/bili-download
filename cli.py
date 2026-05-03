@@ -3,9 +3,12 @@ CLI交互界面模块
 """
 import time
 import asyncio
+import sys
+import platform
 from pathlib import Path
 from typing import Optional, List
 
+VERSION = "1.0.2"
 try:
     from rich.console import Console
     from rich.table import Table
@@ -298,6 +301,7 @@ class BiliCLI:
             print("6. 设置Cookie(SESSDATA)")
             print("7. 重置所有设置")
             print("8. 返回主菜单")
+            print(f"当前版本: {VERSION} | 当前系统: {sys.platform}",END="\n")
             
             choice = Prompt.ask("请选择", choices=["1", "2", "3", "4", "5", "6", "7", "8"])
             

@@ -5,6 +5,7 @@ VERSION = "1.0.1"
 
 import time
 import asyncio
+import os
 import sys
 import platform
 from pathlib import Path

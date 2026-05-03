@@ -14,12 +14,12 @@ if sys.platform.startswith('linux'):
     username = os.getlogin()
     save_dir = f"/home/{username}/BiliDownloads"
 elif sys.platform.startswith('win'):
-    save_dir = f"/BiliDownloads"
+    save_dir = f"./BiliDownloads"
 elif sys.platform.startswith('darwin'):
     username = os.getlogin()
     save_dir = f"/home/{username}/BiliDownloads"
 else:
-    save_dir = f"/BiliDownloads"
+    save_dir = f"./BiliDownloads"
 
 DEFAULT_CONFIG: Dict[str, Any] = {
     "save_dir": save_dir,

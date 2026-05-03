@@ -6,6 +6,7 @@ import asyncio
 import aiohttp
 import aiofiles
 import subprocess
+import shutil
 from pathlib import Path
 from typing import Optional, Dict, Any
 import time
@@ -26,48 +27,28 @@ class VideoDownloader:
         self.speed_limiter = SpeedLimiter(config.get('max_speed_mbps', 0))
         self.path_manager = PathManager(config)
         self.max_retry = config.get('auto_retry', 3)
-        self.progress_callback = None
     
-    def set_progress_callback(self, callback):
-        """设置进度回调函数"""
-        self.progress_callback = callback
-    
-    def _update_progress(self, progress, status):
-        """更新进度"""
-        if self.progress_callback:
-            self.progress_callback(progress, status)
-    
-    async def download_video(self, bvid: str, download_type: str, progress_callback=None) -> Optional[Path]:
+    async def download_video(self, bvid: str, download_type: str) -> Optional[Path]:
         """
         下载视频主流程
-        :param bvid: BV号
-        :param download_type: 下载类型 (audio/video/all)
-        :param progress_callback: 进度回调函数 (progress, status)
         """
-        self.progress_callback = progress_callback
-        
         try:
-            self._update_progress(0, "开始下载...")
             # 设置5分钟(60s*5=300s)超时
             return await asyncio.wait_for(
                 self._download_video_impl(bvid, download_type),
                 timeout=300
             )
         except asyncio.TimeoutError:
-            self._update_progress(0, "下载超时")
             print(f"下载超时 (超过5分钟)，跳过")
             return None
         except Exception as e:
-            self._update_progress(0, f"下载异常: {str(e)}")
             print(f"下载异常: {e}")
             return None
 
     async def _download_video_impl(self, bvid: str, download_type: str) -> Optional[Path]:
         """下载"""
-        self._update_progress(5, "获取视频信息...")
         info = self.api.get_video_info(bvid)
         if not info:
-            self._update_progress(0, "获取视频信息失败")
             print(f"获取视频信息失败: {bvid}")
             return None
         
@@ -80,11 +61,9 @@ class VideoDownloader:
     
     async def _download_single(self, bvid: str, cid: int, title: str, author: str, download_type: str) -> Optional[Path]:
         """下载单个视频"""
-        self._update_progress(10, "获取下载链接...")
         play_data = self.api.get_download_url(bvid, cid)
         
         if not play_data or 'dash' not in play_data:
-            self._update_progress(0, "无法获取下载链接")
             print("无法获取下载链接")
             return None
         
@@ -97,22 +76,17 @@ class VideoDownloader:
         else:  # all
             output_path = await self._download_and_merge(play_data, title, author)
         
-        if output_path:
-            self._update_progress(100, "下载完成")
         return output_path
     
     async def _download_audio_only(self, play_data: Dict, title: str, author: str) -> Optional[Path]:
         """仅下载音频并转为MP3"""
         audio_url = play_data.get('dash', {}).get('audio', [{}])[0].get('base_url')
         if not audio_url:
-            self._update_progress(0, "未找到音频流")
             print("未找到音频流")
             return None
         
-        self._update_progress(15, "下载音频流...")
         temp_path = self.path_manager.get_temp_path(title)
-        if await self._download_file_with_progress(audio_url, temp_path, "音频"):
-            self._update_progress(85, "转换为MP3...")
+        if await self._download_file(audio_url, temp_path):
             mp3_path = self.path_manager.get_output_path(title, author, 'mp3')
             if self._convert_to_mp3(temp_path, mp3_path):
                 temp_path.unlink()
@@ -123,13 +97,11 @@ class VideoDownloader:
         """仅下载视频(无声)"""
         video_url = play_data.get('dash', {}).get('video', [{}])[0].get('base_url')
         if not video_url:
-            self._update_progress(0, "未找到视频流")
             print("未找到视频流")
             return None
         
-        self._update_progress(15, "下载视频流...")
         video_path = self.path_manager.get_output_path(title, author, 'mp4')
-        if await self._download_file_with_progress(video_url, video_path, "视频"):
+        if await self._download_file(video_url, video_path):
             return video_path
         return None
     
@@ -139,7 +111,6 @@ class VideoDownloader:
         audio_list = play_data.get('dash', {}).get('audio', [])
         
         if not video_list:
-            self._update_progress(0, "未找到视频流")
             print("未找到视频流")
             return None
         
@@ -156,14 +127,13 @@ class VideoDownloader:
         audio_url = audio_list[0].get('base_url')
         
         if not video_url or not audio_url:
-            self._update_progress(0, "无法获取下载链接")
             print("无法获取下载链接")
             return None
         
         temp_video = self.path_manager.get_temp_path(f"{title}_video")
         temp_audio = self.path_manager.get_temp_path(f"{title}_audio")
         
-        self._update_progress(15, "下载视频流...")
+        print("下载视频流...")
         video_ok = await self._download_file_with_progress(video_url, temp_video, "视频")
         
         #备用视频链接
@@ -173,11 +143,10 @@ class VideoDownloader:
             if video_url:
                 video_ok = await self._download_file_with_progress(video_url, temp_video, "视频备用")
         
-        self._update_progress(50, "下载音频流...")
+        print("下载音频流...")
         audio_ok = await self._download_file_with_progress(audio_url, temp_audio, "音频")
         
         if video_ok and audio_ok:
-            self._update_progress(80, "合并视频和音频...")
             print(f"正在合并视频和音频...")
             if self._merge_video_audio(temp_video, temp_audio, output_path):
                 temp_video.unlink()
@@ -185,11 +154,9 @@ class VideoDownloader:
                 print(f"✓ 合并完成")
                 return output_path
             else:
-                self._update_progress(0, "合并失败")
                 print("合并失败")
         else:
             if not video_ok:
-                self._update_progress(0, "视频流下载失败（可能需要登录）")
                 print("视频流下载失败（可能是需要登录或链接已过期）")
             if audio_ok:
                 audio_output = self.path_manager.get_output_path(title, author, 'mp3')
@@ -332,19 +299,54 @@ class VideoDownloader:
             print(f"转换失败: {e}")
             return False
     
+    def _find_ffmpeg(self) -> str:
+        """查找FFmpeg可执行文件路径"""
+        import os
+        
+        def is_exe(fpath):
+            return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+        
+        ffmpeg_names = ['ffmpeg', 'ffmpeg.exe']
+        
+        for name in ffmpeg_names:
+            if is_exe(name):
+                return name
+            
+            path = shutil.which(name)
+            if path:
+                return path
+        
+        common_paths = [
+            'C:\\ffmpeg\\bin\\ffmpeg.exe',
+            'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
+            'C:\\Program Files (x86)\\ffmpeg\\bin\\ffmpeg.exe',
+            '/usr/bin/ffmpeg',
+            '/usr/local/bin/ffmpeg'
+        ]
+        
+        for path in common_paths:
+            if is_exe(path):
+                return path
+        
+        return None
+    
     def _merge_video_audio(self, video_path: Path, audio_path: Path, output_path: Path) -> bool:
         """合并视频和音频，带进度显示"""
         print("  正在合并 (可能需要1-2分钟)...")
         
+        ffmpeg_path = self._find_ffmpeg()
+        if not ffmpeg_path:
+            print("  错误: 未找到FFmpeg，请安装FFmpeg并加入系统PATH")
+            return False
+        
         cmd = [
-            "ffmpeg", "-i", str(video_path), "-i", str(audio_path),
+            ffmpeg_path, "-i", str(video_path), "-i", str(audio_path),
             "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
             "-map", "0:v:0", "-map", "1:a:0",
             "-shortest", "-y", str(output_path)
         ]
         
         try:
-            # Popen 实时输出进度
             process = subprocess.Popen(
                 cmd, 
                 stdout=subprocess.PIPE, 
@@ -352,20 +354,17 @@ class VideoDownloader:
                 text=True
             )
             
-            # stderr 中的进度信息
             last_progress = 0
             while True:
                 line = process.stderr.readline()
                 if not line and process.poll() is not None:
                     break
                 if 'time=' in line:
-                    # 时间进度
                     import re
                     match = re.search(r'time=(\d{2}):(\d{2}):(\d{2})', line)
                     if match:
                         hours, minutes, seconds = map(int, match.groups())
                         total_seconds = hours * 3600 + minutes * 60 + seconds
-                        # 估算进度
                         progress = min(int(total_seconds / 300 * 100), 99)
                         if progress > last_progress:
                             print(f"  合并进度: {progress}%", end='\r')
@@ -374,9 +373,8 @@ class VideoDownloader:
             process.wait(timeout=180)
             
             if process.returncode != 0:
-                # 备用方案
                 cmd2 = [
-                    "ffmpeg", "-i", str(video_path), "-i", str(audio_path),
+                    ffmpeg_path, "-i", str(video_path), "-i", str(audio_path),
                     "-c:v", "libx264", "-c:a", "aac", "-crf", "23",
                     "-y", str(output_path)
                 ]
@@ -388,6 +386,9 @@ class VideoDownloader:
             print("  合并进度: 100%")
             return True
             
+        except FileNotFoundError:
+            print(f"\n  错误: 无法找到FFmpeg，请安装FFmpeg并加入系统PATH")
+            return False
         except subprocess.TimeoutExpired:
             process.kill()
             print("\n  合并超时")

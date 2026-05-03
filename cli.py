@@ -1,6 +1,8 @@
 """
 CLI交互界面模块
 """
+VERSION = "1.0.1"
+
 import time
 import asyncio
 import sys
@@ -8,7 +10,6 @@ import platform
 from pathlib import Path
 from typing import Optional, List
 
-VERSION = "1.0.2"
 try:
     from rich.console import Console
     from rich.table import Table
@@ -301,9 +302,9 @@ class BiliCLI:
             print("6. 设置Cookie(SESSDATA)")
             print("7. 重置所有设置")
             print("8. 返回主菜单")
-            print(f"当前版本: {VERSION} | 当前系统: {sys.platform}",END="\n")
+            print(f"当前版本: {VERSION} | 当前系统: {sys.platform}",end="\n\n")
             
-            choice = Prompt.ask("请选择", choices=["1", "2", "3", "4", "5", "6", "7", "8"])
+            choice = Prompt.ask("请选择", choices=["clear","1", "2", "3", "4", "5", "6", "7", "8"])
             
             if choice == "1":
                 new_dir = Prompt.ask("请输入新的保存目录", default=self.config.get('save_dir'))
@@ -355,3 +356,15 @@ class BiliCLI:
             
             elif choice == "8":
                 break
+
+            elif choice == "clear":
+                if sys.platform.startswith('linux'):
+                    os.system("clear")
+                elif sys.platform.startswith('win'):
+                    os.system("cls")
+                else:
+                    print("不支持的系统")
+
+            else:
+                print("无效选择")
+                continue
